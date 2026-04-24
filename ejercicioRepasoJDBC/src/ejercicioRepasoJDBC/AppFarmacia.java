@@ -25,17 +25,13 @@ public class AppFarmacia {
 
 	private JFrame frame;
 	DefaultTableModel model;
+	DefaultTableModel modelo;
+	JCheckBox checkBoxStock = new JCheckBox("Stock");
 
 	private JTextField textFieldId;
-	private JTextField textFieldNombre;
 	private JTextField textFieldFecha;
-	
-	
-	DefaultTableModel modelo;
+	private JTextField textFieldNombre;
 
-	/**
-	 * Launch the application.
-	 */
 	public static void main(String[] args) {
 		EventQueue.invokeLater(new Runnable() {
 			public void run() {
@@ -49,16 +45,10 @@ public class AppFarmacia {
 		});
 	}
 
-	/**
-	 * Create the application.
-	 */
 	public AppFarmacia() {
 		initialize();
 	}
 
-	/**
-	 * Initialize the contents of the frame.
-	 */
 	private void cargarTabla() {
 		try {
 			Connection con = ConnectionSingleton.getConnection();
@@ -68,12 +58,12 @@ public class AppFarmacia {
 			model.setRowCount(0);
 
 			while (rs.next()) {
-				Object[] row = new Object[4];
+				Object[] row = new Object[5];
 				row[0] = rs.getInt("id");
 				row[1] = rs.getString("nombre");
 				row[2] = rs.getString("fecha");
 				row[3] = rs.getString("formato");
-				// row[4] = rs.getBoolean("stock");
+				row[4] = rs.getBoolean("stock");
 				model.addRow(row);
 			}
 
@@ -85,23 +75,20 @@ public class AppFarmacia {
 		}
 	}
 
-	
 	private void cargarTabla2() {
 		try {
 			Connection con = ConnectionSingleton.getConnection();
 			Statement stmt = con.createStatement();
-			ResultSet rs = stmt.executeQuery("SELECT * FROM medicamento");
+			
+			ResultSet rs = stmt.executeQuery("SELECT id, nombre FROM medicamento WHERE stock = false");
 
-			model.setRowCount(0);
+			modelo.setRowCount(0); 
 
 			while (rs.next()) {
-				Object[] row = new Object[4];
+				Object[] row = new Object[2];
 				row[0] = rs.getInt("id");
 				row[1] = rs.getString("nombre");
-				row[2] = rs.getString("fecha");
-				row[3] = rs.getString("formato");
-				// row[4] = rs.getBoolean("stock");
-				model.addRow(row);
+				modelo.addRow(row);
 			}
 
 			rs.close();
@@ -111,6 +98,7 @@ public class AppFarmacia {
 			JOptionPane.showMessageDialog(null, ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
 		}
 	}
+
 	private void initialize() {
 		frame = new JFrame();
 		frame.setBounds(100, 100, 660, 494);
@@ -122,13 +110,13 @@ public class AppFarmacia {
 		textFieldId.setBounds(22, 195, 114, 21);
 		frame.getContentPane().add(textFieldId);
 
-		textFieldFecha = new JTextField();
-		textFieldFecha.setBounds(22, 240, 114, 21);
-		frame.getContentPane().add(textFieldFecha);
-
 		textFieldNombre = new JTextField();
-		textFieldNombre.setBounds(22, 287, 114, 21);
+		textFieldNombre.setBounds(22, 240, 114, 21);
 		frame.getContentPane().add(textFieldNombre);
+
+		textFieldFecha = new JTextField();
+		textFieldFecha.setBounds(22, 287, 114, 21);
+		frame.getContentPane().add(textFieldFecha);
 
 		model = new DefaultTableModel();
 		model.addColumn("ID");
@@ -147,7 +135,6 @@ public class AppFarmacia {
 		comboBoxFormato.setBounds(22, 333, 114, 26);
 		frame.getContentPane().add(comboBoxFormato);
 
-		JCheckBox checkBoxStock = new JCheckBox("Stock");
 		checkBoxStock.setBounds(22, 383, 114, 25);
 		frame.getContentPane().add(checkBoxStock);
 
@@ -158,8 +145,7 @@ public class AppFarmacia {
 				textFieldNombre.setText(model.getValueAt(i, 1).toString());
 				textFieldFecha.setText(model.getValueAt(i, 2).toString());
 				comboBoxFormato.setSelectedItem(model.getValueAt(i, 3).toString());
-				
-
+				checkBoxStock.setSelected(Boolean.parseBoolean(model.getValueAt(i, 4).toString()));
 			}
 		});
 
@@ -174,21 +160,24 @@ public class AppFarmacia {
 						JOptionPane.showMessageDialog(null, "introduce el nombre del medicamento");
 					} else if (textFieldFecha.getText().isEmpty()) {
 						JOptionPane.showMessageDialog(null, "introduce la fecha de caducidad del medicamento");
-				//		 } else if (!textFieldFecha.getText().matches("[A-Z]{3}2{1}[567]{1}")) {
-			//			 JOptionPane.showMessageDialog(null, "el formato de fecha es MAR27");
+					} else if (!textFieldFecha.getText().matches("(ENE|FEB|MAR|ABR|MAY|JUN|JUL|AGO|SEP|OCT|NOV|DIC)2[789]")) {
+						JOptionPane.showMessageDialog(null, "el formato de fecha es MAR27");
 					} else {
 						Connection con = ConnectionSingleton.getConnection();
-						PreparedStatement ps = con
-								.prepareStatement("INSERT INTO medicamento (nombre, fecha, formato) VALUES (?, ?, ?)");
+		
+						PreparedStatement ps = con.prepareStatement(
+								"INSERT INTO medicamento (nombre, fecha, formato, stock) VALUES (?, ?, ?, ?)");
 
 						ps.setString(1, textFieldNombre.getText());
 						ps.setString(2, textFieldFecha.getText());
 						ps.setString(3, (String) comboBoxFormato.getSelectedItem());
+						ps.setBoolean(4, checkBoxStock.isSelected());
 
 						ps.executeUpdate();
 						ps.close();
 
 						cargarTabla();
+						cargarTabla2(); 
 					}
 
 				} catch (SQLException ex) {
@@ -204,28 +193,31 @@ public class AppFarmacia {
 		btnActualizarIng.addMouseListener(new MouseAdapter() {
 			public void mouseClicked(MouseEvent e) {
 				try {
-
 					if (textFieldId.getText().isEmpty()) {
 						JOptionPane.showMessageDialog(null, "selecciona un medicamento de la tabla");
 					} else if (textFieldNombre.getText().isEmpty()) {
 						JOptionPane.showMessageDialog(null, "introduce el nombre del medicamento");
 					} else if (textFieldFecha.getText().isEmpty()) {
 						JOptionPane.showMessageDialog(null, "introduce la fecha de caducidad del medicamento");
-					//	} else if (!textFieldFecha.getText().matches("[A-Z]{3}2{1}[567]")) {
-					//	JOptionPane.showMessageDialog(null, "el formato de fecha es MAR27");
+					} else if (!textFieldFecha.getText().matches("(ENE|FEB|MAR|ABR|MAY|JUN|JUL|AGO|SEP|OCT|NOV|DIC)2[789]")) {
+						JOptionPane.showMessageDialog(null, "el formato de fecha es MAR27");
 					} else {
 						Connection con = ConnectionSingleton.getConnection();
-						PreparedStatement ps = con.prepareStatement("UPDATE medicamento SET nombre=?, fecha=?, formato WHERE id=?");
+						
+						PreparedStatement ps = con.prepareStatement(
+								"UPDATE medicamento SET nombre=?, fecha=?, formato=?, stock=? WHERE id=?");
 
 						ps.setString(1, textFieldNombre.getText());
 						ps.setString(2, textFieldFecha.getText());
 						ps.setString(3, (String) comboBoxFormato.getSelectedItem());
-						ps.setInt(3, Integer.parseInt(textFieldId.getText()));
+						ps.setBoolean(4, checkBoxStock.isSelected());
+						ps.setInt(5, Integer.parseInt(textFieldId.getText()));
 
 						ps.executeUpdate();
 						ps.close();
 
 						cargarTabla();
+						cargarTabla2();
 					}
 
 				} catch (SQLException ex) {
@@ -233,7 +225,7 @@ public class AppFarmacia {
 				}
 			}
 		});
-		
+
 		JButton btnBorrarIng = new JButton("Borrar");
 		btnBorrarIng.setBounds(148, 284, 105, 27);
 		frame.getContentPane().add(btnBorrarIng);
@@ -241,7 +233,6 @@ public class AppFarmacia {
 		btnBorrarIng.addMouseListener(new MouseAdapter() {
 			public void mouseClicked(MouseEvent e) {
 				try {
-
 					if (textFieldId.getText().isEmpty()) {
 						JOptionPane.showMessageDialog(null, "selecciona un medicamento de la tabla");
 					} else {
@@ -254,6 +245,7 @@ public class AppFarmacia {
 						ps.close();
 
 						cargarTabla();
+						cargarTabla2();
 					}
 
 				} catch (SQLException ex) {
@@ -261,7 +253,6 @@ public class AppFarmacia {
 				}
 			}
 		});
-
 
 		JLabel lblId = new JLabel("id");
 		lblId.setBounds(22, 180, 60, 17);
@@ -279,36 +270,29 @@ public class AppFarmacia {
 		lblFormato.setBounds(22, 316, 60, 17);
 		frame.getContentPane().add(lblFormato);
 
-	
+		
 		modelo = new DefaultTableModel();
 		modelo.addColumn("ID");
 		modelo.addColumn("Nombre");
-		modelo.addColumn("Fecha");
-		modelo.addColumn("Formato");
-		modelo.addColumn("Stock");
-		
-		
-		JTable tableReceta = new JTable(modelo);
-		JScrollPane scrollPane2 = new JScrollPane(tableReceta);
+
+		JTable tablaStock = new JTable(modelo);
+		JScrollPane scrollPane2 = new JScrollPane(tablaStock);
 		scrollPane2.setBounds(349, 0, 282, 171);
 		frame.getContentPane().add(scrollPane2);
 
-		JLabel lblIngredientes = new JLabel("");
-		lblIngredientes.setBounds(500, 342, 214, 14);
-		frame.getContentPane().add(lblIngredientes);
+		JLabel lblSinStock = new JLabel("Sin stock");
+		lblSinStock.setBounds(349, 175, 100, 14);
+		frame.getContentPane().add(lblSinStock);
 
-		tableReceta.addMouseListener(new MouseAdapter() {
+	
+		tablaStock.addMouseListener(new MouseAdapter() {
 			public void mouseClicked(MouseEvent e) {
-				int i = tableReceta.getSelectedRow();
-				textFieldId.setText(model.getValueAt(i, 0).toString());
-				textFieldNombre.setText(model.getValueAt(i, 1).toString());
-				textFieldFecha.setText(model.getValueAt(i, 2).toString());
-				comboBoxFormato.setSelectedItem(model.getValueAt(i, 3).toString());
-				
-			
+				int i = tablaStock.getSelectedRow();
+				textFieldId.setText(modelo.getValueAt(i, 0).toString());
 			}
 		});
 
 		cargarTabla();
+		cargarTabla2();
 	}
 }
